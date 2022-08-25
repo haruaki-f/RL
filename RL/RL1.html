@@ -50,11 +50,13 @@
 OpenAI gymでは、最初に環境(env)をつくって、その中でエージェントが行動(= action)を選択してstep()することで、選ばれた行動に応じてつぎの状態であるobservationが返ってくるのでした。
 このプログラムでは、sample()メソッドをもちいることで、ランダムにアクションが選ばれています。
 この部分に、表情からの入力を入れることで、表情に応じた動きを実現できるはずです。</p>
-<p>breakoutは4つのアクションがあります。
-* 0: 何もしない
-* 1: 球が出てくる
-* 2: 右へ動く
-* 3: 左へ動く</p>
+<p>breakoutは4つのアクションがあります。</p>
+<ul class="simple">
+<li><p>0: 何もしない</p></li>
+<li><p>1: 球が出てくる</p></li>
+<li><p>2: 右へ動く</p></li>
+<li><p>3: 左へ動く</p></li>
+</ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gym</span>
 
 <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;Breakout-v4&quot;</span><span class="p">,</span> <span class="n">render_mode</span><span class="o">=</span><span class="s2">&quot;human&quot;</span><span class="p">)</span> <span class="c1"># 環境を作る</span>
