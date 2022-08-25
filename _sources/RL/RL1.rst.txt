@@ -1,0 +1,217 @@
+*****************************************************
+表情でゲーム
+*****************************************************
+
+はじめに
+==================================
+
+ブロック崩しゲーム（breakout）を表情によってコントロールします。まずは、breakoutを動かします。
+
+
+
+
+breakout
+-------------
+
+Open AI gymの復習です。
+まずは、必要な環境がインストールされていることを確認しましょう。
+
+.. code-block:: python
+
+   pip install gym[atari]
+   pip install gym[all]
+
+
+今回は、学習はしませんので、stablebaselineはつかいません。
+OpenAI gymでは、最初に環境(env)をつくって、その中でエージェントが行動(= action)を選択してstep()することで、選ばれた行動に応じてつぎの状態であるobservationが返ってくるのでした。
+このプログラムでは、sample()メソッドをもちいることで、ランダムにアクションが選ばれています。
+この部分に、表情からの入力を入れることで、表情に応じた動きを実現できるはずです。
+
+
+
+breakoutは4つのアクションがあります。
+* 0: 何もしない
+* 1: 球が出てくる
+* 2: 右へ動く
+* 3: 左へ動く
+
+
+.. code-block:: python
+
+   import gym
+
+   env = gym.make("Breakout-v4", render_mode="human") # 環境を作る
+   
+   print(env.action_space)
+   print(env.observation_space)
+
+   observation, info = env.reset(return_info=True) # 環境をリセット
+
+   for _ in range(1000):
+      action=env.action_space.sample() # action_spaceからランダムにアクションを選ぶ
+      #print(action)
+      observation, reward, done, info = env.step(action) # 環境内でアクションを行い、つぎの状態を得る
+      if done: # 終了していれば、環境をリセット
+         observation, info = env.reset(return_info=True)
+         
+   env.close()
+
+
+
+表情認識
+==================================
+
+表情認識は、顔画像を5~7つ程度のカテゴリーに分類する分類課題です(Facial Emotion Recognition(FER))。古くからいろいろな方法が提案されてきました。1977年、Ekmanらが提案したFacial Action Coding System (FACS)が有名です。Ekmanは表情の分類で有名な心理学者ですが、FACSは、顔筋の動きと心理学的知見を考慮しつつ、表情をコードするシステムです。表情認識では、FACSのようなコーディングシステムやより上位の表現である基本表情のテンプレートとのマッチングを行う方法がとられてきました（たとえば、OpenFace(https://github.com/TadasBaltrusaitis/OpenFace)など）。さらに、近年では、Deep learningを用いて、特徴量を取り出さずにEnd to Endで、学習させる方法が用いられることが増えています。ここでは、PAZ(Perception for Autonomous Systems、https://github.com/oarriaga/paz)を使うことにします。PAZは、deep learningによる表情認識が実装されており、学習済みモデルを用いて簡単に使えます。まずはインストールです。
+
+.. code-block:: python
+
+   pip install pypaz --user
+
+
+PAZで用意された表情認識のためのpipelineを用いて、PCのカメラからの映像の顔検出と表情認識を行います。
+PAZのdemo.py（https://github.com/oarriaga/paz/blob/master/examples/face_classification/demo.py）を動かしてみましょう。
+
+
+demo.pyの中身を確認してみると、表情認識の実行はDetectMiniXceptionFER()が行っていることがわかります。
+ちょっとたどってみましょう。DetectMiniXceptionFER()は、paz.pipelinesからimportされていますので、paz/pilelines.detect.pyを確認すると、DetectMiniXceptionFER()というクラスが下のほうにあります。コメントは以下の通りです。
+
+.. code-block:: python
+
+    """Emotion classification and detection pipeline.
+    # Returns
+        Dictionary with ``image`` and ``boxes2D``.
+    # Example
+        ``` python
+        from paz.pipelines import DetectMiniXceptionFER
+        detect = DetectMiniXceptionFER()
+        # apply directly to an image (numpy-array)
+        inferences = detect(image)
+        ```
+    # Returns
+        A function that takes an RGB image and outputs the predictions
+        as a dictionary with ``keys``: ``image`` and ``boxes2D``.
+        The corresponding values of these keys contain the image with the drawn
+        inferences and a list of ``paz.abstract.messages.Boxes2D``.
+    # References
+       - [Real-time Convolutional Neural Networks for Emotion and
+            Gender Classification](https://arxiv.org/abs/1710.07557)
+    """
+
+表情を予測し、辞書の形で返すようです。よくわからないところは、順々にたどっていくとどのようになっているのか理解ができるはずです。同様に、ここで使われているpaz/pipelines/classification.pyやさらにその中で使われるpaz/models/classification/xception.py も見てみてください。
+
+demo.pyに戻ると、最後から2行目で、この出力であるpipelineがVideoPlayer()で、cameraと統合されて、最後の行で、Videoplayerのインスタンスであるplayerが実行されているようです。
+
+認識した感情をprintするように書き換えるには、このplayer.run()の部分で、一コマずつpipelineから表情の予測値を取り出すと良さそうです。VidelPlayer()クラスを確認して以下のように書き換えました。
+とりあえず、走らせてみましょう。
+
+.. code-block:: python
+
+   import argparse
+   import cv2
+
+   from paz.backend.camera import VideoPlayer
+   from paz.backend.camera import Camera
+   from paz.pipelines import DetectMiniXceptionFER
+   from paz.backend.image import resize_image, convert_color_space, show_image
+   from paz.backend.image import BGR2RGB
+
+   parser = argparse.ArgumentParser(description='Real-time face classifier')
+   parser.add_argument('-c', '--camera_id', type=int, default=0,
+                       help='Camera device ID')
+   parser.add_argument('-o', '--offset', type=float, default=0.1,
+                       help='Scaled offset to be added to bounding boxes')
+   args = parser.parse_args()
+   print(args.offset, args.camera_id)
+
+   pipeline = DetectMiniXceptionFER([args.offset, args.offset])
+   camera = Camera(args.camera_id)
+   player = VideoPlayer((640, 480), pipeline, camera)
+   # player.run() # これをやめて、繰り返しとplayer.step()にして、一コマごとにprint()
+   # VideoPlayer()クラスをオーバーライドしたほうがいいかもしれないけど、あとでstep()は使いそうだし。
+
+   player.camera.start()
+   while True:
+       output = player.step()
+       print(output["boxes2D"])
+       if output is None or len(output["boxes2D"])==0:
+           continue
+       else:
+           emotion=output["boxes2D"][0].class_name
+           print(emotion)
+
+       image = resize_image(output[player.topic], tuple(player.image_size))
+       show_image(image, 'inference', wait=False)
+       if cv2.waitKey(1) & 0xFF == ord('q'):
+           break
+   player.camera.stop()
+   cv2.destroyAllWindows()
+    
+
+
+表情認識とbreakoutをくっつける
+==================================
+
+上の二つのプログラムをくっつけることで、表情認識でゲームが動かせるようになります。PCの性能によりますが、私の環境では、１ステップに30msくらいかかるようです（通常の半分以下の速さ）。ちょっと遅いと感じられますが、仕方がないところでもありますし、GPUをのっけたPCで走らせれば速くなるでしょう。また、今回はシングルスレッドで書いていますが、マルチスレッドで書くのが本当はいいでしょう。あとは、deep learningを用いない表情認識のほうが速い方法があるかもしれない。
+
+.. code-block:: python
+
+   import argparse
+   import cv2
+
+   from paz.backend.camera import VideoPlayer
+   from paz.backend.camera import Camera
+   from paz.pipelines import DetectMiniXceptionFER
+   from paz.backend.image import resize_image, convert_color_space, show_image
+   from paz.backend.image import BGR2RGB
+
+   import gym
+
+   # camera setting
+   parser = argparse.ArgumentParser(description='Real-time face classifier')
+   parser.add_argument('-c', '--camera_id', type=int, default=0, help='Camera device ID')
+   parser.add_argument('-o', '--offset', type=float, default=0.1, help='Scaled offset to be added to bounding boxes')
+   args = parser.parse_args()
+   print(args.offset, args.camera_id)
+
+   # create pipeline
+   pipeline = DetectMiniXceptionFER([args.offset, args.offset])
+   camera = Camera(args.camera_id)
+   player = VideoPlayer((640, 480), pipeline, camera)
+
+   # create game environment
+   env = gym.make("Breakout-v4", render_mode="human")
+   env.action_space.seed(42)
+   observation, info = env.reset(seed=42, return_info=True)
+
+   # camera start
+   player.camera.start()
+
+   table={"neutral":0,"surprise":1,"happy":2,"angry":3,"sad":0,"fear":0,"disgust":0}
+
+   while True:
+       start=time.time()
+       output = player.step()
+       if output is None or len(output["boxes2D"])==0:
+           action=0
+           continue
+       else:
+           emotion=output["boxes2D"][0].class_name
+           #print(emotion)
+           action=table[emotion]
+
+       observation, reward, done, info = env.step(action)
+       if done:
+           observation, info = env.reset(return_info=True)
+
+       image = resize_image(output[player.topic], tuple(player.image_size))
+       show_image(image, 'camera', wait=False)
+
+       #if cv2.waitKey(1) & 0xFF == ord('q'):
+       #    break
+
+   # finish
+   player.camera.stop()
+   env.close()
+   cv2.destroyAllWindows()
+
+

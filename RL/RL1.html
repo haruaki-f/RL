@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>表情でゲーム &#8212; reinforcement learning 0.0.1 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/translations.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="prev" title="reinforcement learning関係の書類" href="../index.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>reinforcement learning 0.0.1 ドキュメント</span></a></h1>
+        <h2 class="heading"><span>表情でゲーム</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../index.html">reinforcement learning関係の書類</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">コンテンツ</a>
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="id1">
+<h1>表情でゲーム<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<section id="id2">
+<h2>はじめに<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>ブロック崩しゲーム（breakout）を表情によってコントロールします。まずは、breakoutを動かします。</p>
+<section id="breakout">
+<h3>breakout<a class="headerlink" href="#breakout" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>Open AI gymの復習です。
+まずは、必要な環境がインストールされていることを確認しましょう。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">gym</span><span class="p">[</span><span class="n">atari</span><span class="p">]</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">gym</span><span class="p">[</span><span class="nb">all</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>今回は、学習はしませんので、stablebaselineはつかいません。
+OpenAI gymでは、最初に環境(env)をつくって、その中でエージェントが行動(= action)を選択してstep()することで、選ばれた行動に応じてつぎの状態であるobservationが返ってくるのでした。
+このプログラムでは、sample()メソッドをもちいることで、ランダムにアクションが選ばれています。
+この部分に、表情からの入力を入れることで、表情に応じた動きを実現できるはずです。</p>
+<p>breakoutは4つのアクションがあります。
+* 0: 何もしない
+* 1: 球が出てくる
+* 2: 右へ動く
+* 3: 左へ動く</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gym</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;Breakout-v4&quot;</span><span class="p">,</span> <span class="n">render_mode</span><span class="o">=</span><span class="s2">&quot;human&quot;</span><span class="p">)</span> <span class="c1"># 環境を作る</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="p">)</span>
+
+<span class="n">observation</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># 環境をリセット</span>
+
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+   <span class="n">action</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span> <span class="c1"># action_spaceからランダムにアクションを選ぶ</span>
+   <span class="c1">#print(action)</span>
+   <span class="n">observation</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span> <span class="c1"># 環境内でアクションを行い、つぎの状態を得る</span>
+   <span class="k">if</span> <span class="n">done</span><span class="p">:</span> <span class="c1"># 終了していれば、環境をリセット</span>
+      <span class="n">observation</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id3">
+<h2>表情認識<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>表情認識は、顔画像を5~7つ程度のカテゴリーに分類する分類課題です(Facial Emotion Recognition(FER))。古くからいろいろな方法が提案されてきました。1977年、Ekmanらが提案したFacial Action Coding System (FACS)が有名です。Ekmanは表情の分類で有名な心理学者ですが、FACSは、顔筋の動きと心理学的知見を考慮しつつ、表情をコードするシステムです。表情認識では、FACSのようなコーディングシステムやより上位の表現である基本表情のテンプレートとのマッチングを行う方法がとられてきました（たとえば、OpenFace(<a class="reference external" href="https://github.com/TadasBaltrusaitis/OpenFace">https://github.com/TadasBaltrusaitis/OpenFace</a>)など）。さらに、近年では、Deep learningを用いて、特徴量を取り出さずにEnd to Endで、学習させる方法が用いられることが増えています。ここでは、PAZ(Perception for Autonomous Systems、<a class="reference external" href="https://github.com/oarriaga/paz">https://github.com/oarriaga/paz</a>)を使うことにします。PAZは、deep learningによる表情認識が実装されており、学習済みモデルを用いて簡単に使えます。まずはインストールです。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pypaz</span> <span class="o">--</span><span class="n">user</span>
+</pre></div>
+</div>
+<p>PAZで用意された表情認識のためのpipelineを用いて、PCのカメラからの映像の顔検出と表情認識を行います。
+PAZのdemo.py（<a class="reference external" href="https://github.com/oarriaga/paz/blob/master/examples/face_classification/demo.py">https://github.com/oarriaga/paz/blob/master/examples/face_classification/demo.py</a>）を動かしてみましょう。</p>
+<p>demo.pyの中身を確認してみると、表情認識の実行はDetectMiniXceptionFER()が行っていることがわかります。
+ちょっとたどってみましょう。DetectMiniXceptionFER()は、paz.pipelinesからimportされていますので、paz/pilelines.detect.pyを確認すると、DetectMiniXceptionFER()というクラスが下のほうにあります。コメントは以下の通りです。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Emotion classification and detection pipeline.</span>
+<span class="sd"># Returns</span>
+<span class="sd">    Dictionary with ``image`` and ``boxes2D``.</span>
+<span class="sd"># Example</span>
+<span class="sd">    ``` python</span>
+<span class="sd">    from paz.pipelines import DetectMiniXceptionFER</span>
+<span class="sd">    detect = DetectMiniXceptionFER()</span>
+<span class="sd">    # apply directly to an image (numpy-array)</span>
+<span class="sd">    inferences = detect(image)</span>
+<span class="sd">    ```</span>
+<span class="sd"># Returns</span>
+<span class="sd">    A function that takes an RGB image and outputs the predictions</span>
+<span class="sd">    as a dictionary with ``keys``: ``image`` and ``boxes2D``.</span>
+<span class="sd">    The corresponding values of these keys contain the image with the drawn</span>
+<span class="sd">    inferences and a list of ``paz.abstract.messages.Boxes2D``.</span>
+<span class="sd"># References</span>
+<span class="sd">   - [Real-time Convolutional Neural Networks for Emotion and</span>
+<span class="sd">        Gender Classification](https://arxiv.org/abs/1710.07557)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>表情を予測し、辞書の形で返すようです。よくわからないところは、順々にたどっていくとどのようになっているのか理解ができるはずです。同様に、ここで使われているpaz/pipelines/classification.pyやさらにその中で使われるpaz/models/classification/xception.py も見てみてください。</p>
+<p>demo.pyに戻ると、最後から2行目で、この出力であるpipelineがVideoPlayer()で、cameraと統合されて、最後の行で、Videoplayerのインスタンスであるplayerが実行されているようです。</p>
+<p>認識した感情をprintするように書き換えるには、このplayer.run()の部分で、一コマずつpipelineから表情の予測値を取り出すと良さそうです。VidelPlayer()クラスを確認して以下のように書き換えました。
+とりあえず、走らせてみましょう。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="kn">from</span> <span class="nn">paz.backend.camera</span> <span class="kn">import</span> <span class="n">VideoPlayer</span>
+<span class="kn">from</span> <span class="nn">paz.backend.camera</span> <span class="kn">import</span> <span class="n">Camera</span>
+<span class="kn">from</span> <span class="nn">paz.pipelines</span> <span class="kn">import</span> <span class="n">DetectMiniXceptionFER</span>
+<span class="kn">from</span> <span class="nn">paz.backend.image</span> <span class="kn">import</span> <span class="n">resize_image</span><span class="p">,</span> <span class="n">convert_color_space</span><span class="p">,</span> <span class="n">show_image</span>
+<span class="kn">from</span> <span class="nn">paz.backend.image</span> <span class="kn">import</span> <span class="n">BGR2RGB</span>
+
+<span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Real-time face classifier&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="s1">&#39;--camera_id&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Camera device ID&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;--offset&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Scaled offset to be added to bounding boxes&#39;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">camera_id</span><span class="p">)</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">DetectMiniXceptionFER</span><span class="p">([</span><span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">])</span>
+<span class="n">camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">camera_id</span><span class="p">)</span>
+<span class="n">player</span> <span class="o">=</span> <span class="n">VideoPlayer</span><span class="p">((</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+<span class="c1"># player.run() # これをやめて、繰り返しとplayer.step()にして、一コマごとにprint()</span>
+<span class="c1"># VideoPlayer()クラスをオーバーライドしたほうがいいかもしれないけど、あとでstep()は使いそうだし。</span>
+
+<span class="n">player</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">player</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;boxes2D&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;boxes2D&quot;</span><span class="p">])</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">continue</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">emotion</span><span class="o">=</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;boxes2D&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">class_name</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">emotion</span><span class="p">)</span>
+
+    <span class="n">image</span> <span class="o">=</span> <span class="n">resize_image</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="n">player</span><span class="o">.</span><span class="n">topic</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">player</span><span class="o">.</span><span class="n">image_size</span><span class="p">))</span>
+    <span class="n">show_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="s1">&#39;inference&#39;</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">):</span>
+        <span class="k">break</span>
+<span class="n">player</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">destroyAllWindows</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h2>表情認識とbreakoutをくっつける<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>上の二つのプログラムをくっつけることで、表情認識でゲームが動かせるようになります。PCの性能によりますが、私の環境では、１ステップに30msくらいかかるようです（通常の半分以下の速さ）。ちょっと遅いと感じられますが、仕方がないところでもありますし、GPUをのっけたPCで走らせれば速くなるでしょう。また、今回はシングルスレッドで書いていますが、マルチスレッドで書くのが本当はいいでしょう。あとは、deep learningを用いない表情認識のほうが速い方法があるかもしれない。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="kn">from</span> <span class="nn">paz.backend.camera</span> <span class="kn">import</span> <span class="n">VideoPlayer</span>
+<span class="kn">from</span> <span class="nn">paz.backend.camera</span> <span class="kn">import</span> <span class="n">Camera</span>
+<span class="kn">from</span> <span class="nn">paz.pipelines</span> <span class="kn">import</span> <span class="n">DetectMiniXceptionFER</span>
+<span class="kn">from</span> <span class="nn">paz.backend.image</span> <span class="kn">import</span> <span class="n">resize_image</span><span class="p">,</span> <span class="n">convert_color_space</span><span class="p">,</span> <span class="n">show_image</span>
+<span class="kn">from</span> <span class="nn">paz.backend.image</span> <span class="kn">import</span> <span class="n">BGR2RGB</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+
+<span class="c1"># camera setting</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Real-time face classifier&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="s1">&#39;--camera_id&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Camera device ID&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;--offset&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Scaled offset to be added to bounding boxes&#39;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">camera_id</span><span class="p">)</span>
+
+<span class="c1"># create pipeline</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">DetectMiniXceptionFER</span><span class="p">([</span><span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">offset</span><span class="p">])</span>
+<span class="n">camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">camera_id</span><span class="p">)</span>
+<span class="n">player</span> <span class="o">=</span> <span class="n">VideoPlayer</span><span class="p">((</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+
+<span class="c1"># create game environment</span>
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;Breakout-v4&quot;</span><span class="p">,</span> <span class="n">render_mode</span><span class="o">=</span><span class="s2">&quot;human&quot;</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">observation</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># camera start</span>
+<span class="n">player</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<span class="n">table</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;neutral&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;surprise&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;happy&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s2">&quot;angry&quot;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s2">&quot;sad&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;fear&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;disgust&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">start</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">player</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;boxes2D&quot;</span><span class="p">])</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">action</span><span class="o">=</span><span class="mi">0</span>
+        <span class="k">continue</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">emotion</span><span class="o">=</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;boxes2D&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">class_name</span>
+        <span class="c1">#print(emotion)</span>
+        <span class="n">action</span><span class="o">=</span><span class="n">table</span><span class="p">[</span><span class="n">emotion</span><span class="p">]</span>
+
+    <span class="n">observation</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+        <span class="n">observation</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">image</span> <span class="o">=</span> <span class="n">resize_image</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="n">player</span><span class="o">.</span><span class="n">topic</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">player</span><span class="o">.</span><span class="n">image_size</span><span class="p">))</span>
+    <span class="n">show_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="s1">&#39;camera&#39;</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1">#if cv2.waitKey(1) &amp; 0xFF == ord(&#39;q&#39;):</span>
+    <span class="c1">#    break</span>
+
+<span class="c1"># finish</span>
+<span class="n">player</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+<span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">destroyAllWindows</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../index.html">reinforcement learning関係の書類</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">コンテンツ</a>
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Haruaki Fukuda.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  </body>
+</html>
